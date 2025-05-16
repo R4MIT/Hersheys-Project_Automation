@@ -1,25 +1,38 @@
 const { test, expect } = require('@playwright/test');
-const { GlobalAuthentication } = require('../../main/Utilities/GlobalAuthentication');
 const { OrderReviewPage } = require('../../main/PageObjects/OrderReviewPage');
+const { GlobalAuthentication } = require('../../main/Utilities/GlobalAuthentication');
+const testData = require('../../main/Utilities/TestData');
 
-test.describe('Order Placement Flow and Checkout Tests', () => {
+const logStep = (msg) => console.log(`✔️ ${msg}`);
 
-    test('Proceed to Checkout and Confirm Order', async ({ browser }) => {
+async function setupOrderTest(browser) {
+    const globalAuthentication = new GlobalAuthentication(browser);
+    const page = await globalAuthentication.invokeBrowser();
+    return {
+        page,
+        globalAuthentication,
+        orderReviewPage: new OrderReviewPage(page)
+    };
+}
 
-        // Reuse the previous authentication state
-        const globalAuthentication = new GlobalAuthentication(browser);
-        const page = await globalAuthentication.useAuth();
-
-        const orderReviewPage = new OrderReviewPage(page);
-
-        // Proceed to Checkout and Place the Order
-        await orderReviewPage.proceedToCheckout();
-        await orderReviewPage.confirmOrder();
-        await page.waitForLoadState('networkidle');
-
-        // Assert
-        const confirmationText = await page.locator('.order-confirmation-message').textContent();
-        console.log("Order Confirmation Message: ", confirmationText);
-        expect(confirmationText).toContain('Thank you for your order');
+test.describe('Order Checkout', () => {
+    test('Order Checkout Flow', async ({ browser }) => {
+        try {
+            const { page, globalAuthentication, orderReviewPage } = await setupOrderTest(browser);
+            await orderReviewPage.navigateToURL(testData.url);
+            await globalAuthentication.acceptCookies();
+            logStep('Cookies accepted.');
+            await orderReviewPage.verifyNavigation();
+            await orderReviewPage.proceedToCheckout();
+            await orderReviewPage.confirmOrder();
+            await orderReviewPage.waitForNavigation();
+            const confirmationText = await page.locator('.order-confirmation-message').textContent();
+            logStep(`Order Confirmation Message: ${confirmationText}`);
+            expect(confirmationText).toContain('Thank you for your order');
+            logStep('Order placed and confirmed!');
+        } catch (error) {
+            console.error('❌ Error during Order Checkout: ', error);
+            throw error;
+        }
     });
 });

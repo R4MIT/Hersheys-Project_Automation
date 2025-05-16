@@ -1,40 +1,37 @@
 const { test, expect } = require('@playwright/test');
-const { DashboardPage } = require('../../main/PageObjects/DashboardPage');
 const { ChocolateAndCandyPage } = require('../../main/PageObjects/ChocolateAndCandyPage');
+const { GlobalAuthentication } = require('../../main/Utilities/GlobalAuthentication');
 const testData = require('../../main/Utilities/TestData');
 
-// Negative path: Search for a non-existent product and verify the UI response
+const logStep = (msg) => console.log(`✔️ ${msg}`);
 
-test.describe('Negative Path - Product Search', () => {
-    test('Should show no results for a non-existent product', async ({ page }) => {
-        const dashboardPage = new DashboardPage(page);
-        const chocolateAndCandyPage = new ChocolateAndCandyPage(page);
+async function setupNegativeProductTest(browser) {
+    const globalAuthentication = new GlobalAuthentication(browser);
+    const page = await globalAuthentication.invokeBrowser();
+    return {
+        page,
+        globalAuthentication,
+        chocolateAndCandyPage: new ChocolateAndCandyPage(page)
+    };
+}
 
-        await dashboardPage.navigateToURL(testData.url);
-        await dashboardPage.verifyNavigation();
-        await dashboardPage.clickOnChocolateAndCandyTab();
-        await chocolateAndCandyPage.verifyNavigation();
-
-        // Attempt to search for a product that does not exist
-        const desktopSearch = page.locator('#search-field');
-        const mobileSearch = page.locator('#search-field-mobile');
-        let searchBox;
-        if (await desktopSearch.isVisible()) {
-            searchBox = desktopSearch;
-        } else if (await mobileSearch.isVisible()) {
-            searchBox = mobileSearch;
-        } else {
-            throw new Error('No visible search box found!');
+test.describe('Negative Product Search', () => {
+    test('Search for Non-Existent Product', async ({ browser }) => {
+        try {
+            const { page, globalAuthentication, chocolateAndCandyPage } = await setupNegativeProductTest(browser);
+            await chocolateAndCandyPage.navigateToURL(testData.url);
+            await globalAuthentication.acceptCookies();
+            logStep('Cookies accepted.');
+            await chocolateAndCandyPage.verifyNavigation();
+            await chocolateAndCandyPage.searchForProduct('NonExistentProduct');
+            // If navigation wait is needed, use:
+            // await chocolateAndCandyPage.waitForNavigation();
+            const noResults = await page.locator('.no-results-message').isVisible();
+            expect(noResults).toBeTruthy();
+            logStep('Verified no results for non-existent product.');
+        } catch (error) {
+            console.error('❌ Error during Negative Product Search: ', error);
+            throw error;
         }
-        await searchBox.fill('NonExistentProduct12345');
-        await searchBox.press('Enter');
-
-        // Wait for search results to update
-        await page.waitForTimeout(1000);
-
-        // Check for a 'no results' message or empty product grid
-        const noResults = await page.locator('text=/no results|not found|no products/i').first();
-        const isVisible = await noResults.isVisible().catch(() => false);
-        expect(isVisible).toBeTruthy();
     });
 });

@@ -1,35 +1,37 @@
 const { test, expect } = require('@playwright/test');
-const { GlobalAuthentication } = require('../../main/Utilities/GlobalAuthentication');
 const { ChocolateAndCandyPage } = require('../../main/PageObjects/ChocolateAndCandyPage');
+const { GlobalAuthentication } = require('../../main/Utilities/GlobalAuthentication');
+const testData = require('../../main/Utilities/TestData');
 
 
-test.describe.serial('Product Selection Flow', () => {
+const logStep = (msg) => console.log(`✔️ ${msg}`);
 
-    test('Select a Product from Chocolate and Candy', async ({ page }) => {
+async function setupChoosingProductTest(browser) {
+    const globalAuthentication = new GlobalAuthentication(browser);
+    const page = await globalAuthentication.invokeBrowser();
+    return {
+        page,
+        globalAuthentication,
+        chocolateAndCandyPage: new ChocolateAndCandyPage(page)
+    };
+}
 
-        // Initialize the Chocolate and Candy page object correctly
-        const chocolateAndCandyPage = new ChocolateAndCandyPage(page);
-
-        //Performing Actions
-        await chocolateAndCandyPage.getTitle();
-        await chocolateAndCandyPage.getCurrentUrl();
-
-        // List all candies and select a product
-        await chocolateAndCandyPage.listAllCandiesOnCncPage();
-
-        // Assert the specific product is visible
-        const productName = "JOLLY RANCHER Freeze Dried Original Fruit Flavored Candy  Bag, 3.1 oz";
-        await chocolateAndCandyPage.assertProductVisibility(productName);
-
-        // Click the product
-        await chocolateAndCandyPage.selectProduct(productName);
-        await page.waitForLoadState('networkidle');
-
-        // Verify that navigation actually happened
-        const currentUrl = page.url();
-        console.log(`Navigated to Product Page URL: ${currentUrl}`);
-
-        console.log("Successfully navigated to the Selected Product page.");
-
+test.describe('Choosing Product', () => {
+    test('Choose Product from Chocolate and Candy Page', async ({ browser }) => {
+        try {
+            const { page, globalAuthentication, chocolateAndCandyPage } = await setupChoosingProductTest(browser);
+            await chocolateAndCandyPage.navigateToURL(testData.url);
+            await globalAuthentication.acceptCookies();
+            logStep('Cookies accepted.');
+            await chocolateAndCandyPage.verifyNavigation();
+            await chocolateAndCandyPage.listAllCandiesOnCncPage();
+            await chocolateAndCandyPage.matchAndSelectProductPartial(testData.productNamePartial);
+            logStep('Product matched and selected.');
+            // If navigation wait is needed, use:
+            // await chocolateAndCandyPage.waitForNavigation();
+        } catch (error) {
+            console.error('❌ Error during Choosing Product: ', error);
+            throw error;
+        }
     });
 });
