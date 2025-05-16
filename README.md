@@ -1,7 +1,8 @@
 # Hershey's Playwright Automation Framework
 
 ## Overview
-This project is a modular, industry-standard Playwright automation framework for Hershey's online store. It uses the Page Object Model, robust utilities, and is ready for CI/CD and advanced reporting.
+This repository contains an end-to-end automation framework for Hershey's e-commerce platform, built using Playwright with modular architecture.
+
 
 ## Features
 - Page Object Model (POM) for maintainable, reusable code
